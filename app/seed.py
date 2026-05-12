@@ -1,0 +1,123 @@
+from sqlalchemy import select
+
+from app.database import async_session
+from app.models import Player
+
+PLAYERS = [
+    ("Storm Haeck", "U16"),
+    # Trainers
+    ("Benny", "Trainer"),
+    ("Chiel", "Trainer"),
+    ("Christophe Debie", "Trainer"),
+    ("Delano", "Trainer"),
+    ("Maxim", "Trainer"),
+    ("Tibe", "Trainer"),
+    # U13
+    ("Bauters Mil", "U13"),
+    ("Jonas De Bruyne", "U13"),
+    ("Luiz-Cruz Polido Pilo", "U13"),
+    ("Nathan Hendrix", "U13"),
+    ("Vin Junius", "U13"),
+    ("Vince Van Kelst", "U13"),
+    ("Willem Beckers", "U13"),
+    ("Xandr Iftimia", "U13"),
+    # U15
+    ("Bardo Glorieux", "U15"),
+    ("Bauters Josse", "U15"),
+    ("Beckers Lars", "U15"),
+    ("Brent Huygens", "U15"),
+    ("Breuer Gabriel", "U15"),
+    ("Ceenaeme Thor", "U15"),
+    ("Charlie Straetmans", "U15"),
+    ("De Ruysscher Wout", "U15"),
+    ("De Sutter Niel", "U15"),
+    ("Deck Matz", "U15"),
+    ("Demeyer Dyaz", "U15"),
+    ("Draps Mathias", "U15"),
+    ("Francis Mathis", "U15"),
+    ("Jasper De Winter", "U15"),
+    ("Jerom Straetmans", "U15"),
+    ("Jitse Doms", "U15"),
+    ("Nyo Pauwels", "U15"),
+    ("Pauwels Runne", "U15"),
+    ("Pieter Van de Ven", "U15"),
+    ("Potoms Rémy", "U15"),
+    ("Sander Knuts", "U15"),
+    ("Van de Voorde Oskar", "U15"),
+    ("Van de Voorde Seppe", "U15"),
+    ("Van den Broeck Mil", "U15"),
+    ("Van Kelst Rune", "U15"),
+    # U16
+    ("Alexander De Winter", "U16"),
+    ("Anastassian Matteo", "U16"),
+    ("Arda Eğilmez", "U16"),
+    ("Croes Cyriel", "U16"),
+    ("De Win Enzo", "U16"),
+    ("Deschouwer Kaan", "U16"),
+    ("Doms Lenn", "U16"),
+    ("Gust Van Paesschen", "U16"),
+    ("Haeck Storm", "U16"),
+    ("Jarne Ceulemans", "U16"),
+    ("Julien Vercruysen", "U16"),
+    ("Klaas Philippens", "U16"),
+    ("Kobe Keustermans", "U16"),
+    ("Paelinck Lowie", "U16"),
+    ("Paesmans Lukas", "U16"),
+    ("Tuur De Proost", "U16"),
+    ("Van de Voorde Felix", "U16"),
+    ("Van Malder Vic", "U16"),
+    ("Vanneste Ewout", "U16"),
+    ("Viktor Boeve", "U16"),
+    ("Xander Trappeniers", "U16"),
+    ("Yoni De Leeuw", "U16"),
+    # U17
+    ("Arnaud Spitzer", "U17"),
+    ("Beel Jarno", "U17"),
+    ("Biedma Ballesteros Akira", "U17"),
+    ("Briers Paul", "U17"),
+    ("Cogneau Bjarne", "U17"),
+    ("Coppens Sander", "U17"),
+    ("Dario Bohets", "U17"),
+    ("De Poorter Vincent", "U17"),
+    ("Diricx Gust", "U17"),
+    ("Francis Xander", "U17"),
+    ("Goyvaerts Lester", "U17"),
+    ("Hannes Van de Ven", "U17"),
+    ("Heylen Jarno", "U17"),
+    ("Ibrahimi Yoran", "U17"),
+    ("Jarne Croes", "U17"),
+    ("Jens Van der Ven", "U17"),
+    ("Jules De Pooter", "U17"),
+    ("Jules Sprengers", "U17"),
+    ("Jurgen Ngila", "U17"),
+    ("Kamiel Debell", "U17"),
+    ("Laloux Matthias", "U17"),
+    ("Lcaugh Finian", "U17"),
+    ("Leander Bell", "U17"),
+    ("Lenn Doms", "U17"),
+    ("Louis Bruwier", "U17"),
+    ("Nils De Nys", "U17"),
+    ("Nolan De Smet", "U17"),
+    ("Robbe Devroey", "U17"),
+    ("Rufus Goris", "U17"),
+    ("Sofiane Mukinga", "U17"),
+    ("Tiebe Huygens", "U17"),
+    ("Vallaeys Noah", "U17"),
+    ("Van Langenhove Matisse", "U17"),
+    ("Van Oevelen Thomas", "U17"),
+    ("Vanhoegaerden Matthias", "U17"),
+    ("Vic Maes", "U17"),
+    ("Xander Francis", "U17"),
+    ("Zeno Vanden Driessche", "U17"),
+]
+
+
+async def seed_players():
+    async with async_session() as session:
+        result = await session.execute(select(Player).limit(1))
+        if result.scalar_one_or_none() is not None:
+            return
+
+        for name, category in PLAYERS:
+            session.add(Player(name=name, category=category))
+        await session.commit()

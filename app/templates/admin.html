@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - FC Zemst Sportief</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fcz: {
+                            red: '#ec1f26',
+                            yellow: '#f7ee23',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111; min-height: 100vh; }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="inline-flex items-center gap-0.5">
+                        <span class="bg-fcz-red text-white font-black text-sm px-2.5 py-1 rounded-l">FC</span>
+                        <span class="bg-fcz-yellow text-black font-black text-sm px-2.5 py-1 rounded-r">ZEMST</span>
+                    </div>
+                    <h1 class="text-2xl font-bold text-white">Admin</h1>
+                </div>
+                <p class="text-gray-400 text-sm">Stage Oostende 2026 — Broodjesoverzicht</p>
+            </div>
+            <a href="/" class="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">← Home</a>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-xl p-4 text-center">
+                <p class="text-3xl font-bold text-black" id="statTotal">-</p>
+                <p class="text-xs text-gray-500 mt-1">Totaal spelers</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center">
+                <p class="text-3xl font-bold text-black" id="statSat">-</p>
+                <p class="text-xs text-gray-500 mt-1">Besteld zaterdag</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center">
+                <p class="text-3xl font-bold text-black" id="statSun">-</p>
+                <p class="text-xs text-gray-500 mt-1">Besteld zondag</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 text-center">
+                <p class="text-3xl font-bold text-fcz-red" id="statMissing">-</p>
+                <p class="text-xs text-gray-500 mt-1">Ontbrekend</p>
+            </div>
+        </div>
+
+        <!-- Totals per day -->
+        <div class="grid sm:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6">
+                <h2 class="text-lg font-bold text-black mb-4">Zaterdag — Aantallen</h2>
+                <div id="satSummary" class="space-y-1"></div>
+            </div>
+            <div class="bg-white rounded-xl p-6">
+                <h2 class="text-lg font-bold text-black mb-4">Zondag — Aantallen</h2>
+                <div id="sunSummary" class="space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- Missing orders -->
+        <div class="bg-white rounded-xl p-6 mb-8">
+            <h2 class="text-lg font-bold text-black mb-4">Nog niet besteld</h2>
+            <div id="missingList" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- All orders detail -->
+        <div class="bg-white rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-black">Alle bestellingen</h2>
+                <div class="flex gap-2">
+                    <button onclick="filterOrders('all')" class="filter-btn px-3 py-1 rounded-lg text-sm bg-black text-white font-medium">Alle</button>
+                    <button onclick="filterOrders('zaterdag')" class="filter-btn px-3 py-1 rounded-lg text-sm bg-gray-100 text-gray-600">Zaterdag</button>
+                    <button onclick="filterOrders('zondag')" class="filter-btn px-3 py-1 rounded-lg text-sm bg-gray-100 text-gray-600">Zondag</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b-2 border-black">
+                            <th class="text-left py-2 px-2">Naam</th>
+                            <th class="text-left py-2 px-2">Cat.</th>
+                            <th class="text-left py-2 px-2">Dag</th>
+                            <th class="text-left py-2 px-2">Broodje 1</th>
+                            <th class="text-left py-2 px-2">Broodje 2</th>
+                            <th class="text-left py-2 px-2">Broodje 3</th>
+                            <th class="text-left py-2 px-2">Fruit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allOrders = [];
+        let currentFilter = 'all';
+
+        async function loadData() {
+            const res = await fetch('/api/admin/summary');
+            const data = await res.json();
+
+            document.getElementById('statTotal').textContent = data.total_players;
+            document.getElementById('statSat').textContent = data.total_orders_saturday;
+            document.getElementById('statSun').textContent = data.total_orders_sunday;
+            document.getElementById('statMissing').textContent = data.missing.length;
+
+            renderSummary('satSummary', data.summary.zaterdag);
+            renderSummary('sunSummary', data.summary.zondag);
+            renderMissing(data.missing);
+
+            allOrders = data.orders;
+            renderOrders();
+        }
+
+        function renderSummary(elementId, summary) {
+            const el = document.getElementById(elementId);
+            if (!summary || Object.keys(summary).length === 0) {
+                el.innerHTML = '<p class="text-gray-400 text-sm">Nog geen bestellingen</p>';
+                return;
+            }
+
+            const items = Object.entries(summary).sort((a, b) => b[1] - a[1]);
+            el.innerHTML = items.map(([item, count]) => `
+                <div class="flex justify-between items-center py-1.5 px-3 rounded bg-gray-50">
+                    <span class="text-black capitalize">${item}</span>
+                    <span class="font-bold text-black bg-fcz-yellow px-2 py-0.5 rounded text-sm">${count}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderMissing(missing) {
+            const el = document.getElementById('missingList');
+            if (missing.length === 0) {
+                el.innerHTML = '<p class="text-green-600 font-medium">✓ Iedereen heeft besteld!</p>';
+                return;
+            }
+
+            el.innerHTML = missing.map(m => `
+                <div class="flex items-center gap-2 p-2 rounded-lg border border-gray-200">
+                    <span class="text-xs px-2 py-0.5 bg-fcz-yellow rounded font-bold text-black">${m.category}</span>
+                    <span class="text-sm text-black">${m.name}</span>
+                    <span class="text-xs text-gray-400 ml-auto">${m.day}</span>
+                </div>
+            `).join('');
+        }
+
+        function filterOrders(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                const isActive = btn.textContent.toLowerCase().trim() === filter || (filter === 'all' && btn.textContent.trim() === 'Alle');
+                btn.className = 'filter-btn px-3 py-1 rounded-lg text-sm ' +
+                    (isActive ? 'bg-black text-white font-medium' : 'bg-gray-100 text-gray-600');
+            });
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const filtered = currentFilter === 'all'
+                ? allOrders
+                : allOrders.filter(o => o.day === currentFilter);
+
+            const tbody = document.getElementById('ordersTable');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-400">Geen bestellingen</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-2 px-2 font-medium text-black">${o.player_name}</td>
+                    <td class="py-2 px-2"><span class="text-xs px-1.5 py-0.5 bg-gray-100 rounded font-medium">${o.category}</span></td>
+                    <td class="py-2 px-2 capitalize">${o.day}</td>
+                    <td class="py-2 px-2 capitalize">${o.sandwich_1}</td>
+                    <td class="py-2 px-2 capitalize">${o.sandwich_2}</td>
+                    <td class="py-2 px-2 capitalize">${o.sandwich_3}</td>
+                    <td class="py-2 px-2 capitalize">${o.fruit}</td>
+                </tr>
+            `).join('');
+        }
+
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
