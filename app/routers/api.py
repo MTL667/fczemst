@@ -142,10 +142,12 @@ async def admin_summary(db: AsyncSession = Depends(get_db), _=Depends(verify_adm
             day_summary[s] = day_summary.get(s, 0) + 1
         day_summary[order.fruit] = day_summary.get(order.fruit, 0) + 1
 
-    total_players = await db.execute(select(Player))
-    all_players = total_players.scalars().all()
+    all_players_result = await db.execute(select(Player).order_by(Player.category, Player.name))
+    all_players = all_players_result.scalars().all()
 
-    players_ordered = {(o.player_id, o.day) for o, _ in rows}
+    all_orders_result = await db.execute(select(Order.player_id, Order.day))
+    players_ordered = {(row.player_id, row.day) for row in all_orders_result.all()}
+
     missing = []
     for p in all_players:
         for day in ("zaterdag", "zondag"):
