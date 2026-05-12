@@ -71,6 +71,30 @@
             </div>
         </div>
 
+        <!-- Add player -->
+        <div class="bg-white rounded-xl p-6 mb-8">
+            <h2 class="text-lg font-bold text-black mb-4">Speler toevoegen</h2>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    id="newPlayerName"
+                    placeholder="Naam"
+                    class="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-fcz-red focus:outline-none"
+                >
+                <select id="newPlayerCategory" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-fcz-red focus:outline-none">
+                    <option value="Trainer">Trainer</option>
+                    <option value="U13">U13</option>
+                    <option value="U15">U15</option>
+                    <option value="U16" selected>U16</option>
+                    <option value="U17">U17</option>
+                </select>
+                <button onclick="addPlayer()" class="px-6 py-2 bg-fcz-red hover:bg-red-700 text-white font-bold rounded-lg transition-colors">
+                    Toevoegen
+                </button>
+            </div>
+            <p id="addPlayerMsg" class="hidden mt-2 text-sm font-medium"></p>
+        </div>
+
         <!-- Missing orders -->
         <div class="bg-white rounded-xl p-6 mb-8">
             <h2 class="text-lg font-bold text-black mb-4">Nog niet besteld</h2>
@@ -191,6 +215,46 @@
                     <td class="py-2 px-2 capitalize">${o.fruit}</td>
                 </tr>
             `).join('');
+        }
+
+        async function addPlayer() {
+            const name = document.getElementById('newPlayerName').value.trim();
+            const category = document.getElementById('newPlayerCategory').value;
+            const msg = document.getElementById('addPlayerMsg');
+
+            if (!name) {
+                msg.textContent = 'Vul een naam in';
+                msg.className = 'mt-2 text-sm font-medium text-fcz-red';
+                msg.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/players', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, category })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    msg.textContent = `✓ ${data.name} (${data.category}) toegevoegd`;
+                    msg.className = 'mt-2 text-sm font-medium text-green-600';
+                    msg.classList.remove('hidden');
+                    document.getElementById('newPlayerName').value = '';
+                    loadData();
+                    setTimeout(() => msg.classList.add('hidden'), 3000);
+                } else {
+                    const err = await res.json();
+                    msg.textContent = err.detail || 'Fout bij toevoegen';
+                    msg.className = 'mt-2 text-sm font-medium text-fcz-red';
+                    msg.classList.remove('hidden');
+                }
+            } catch (e) {
+                msg.textContent = 'Verbindingsfout';
+                msg.className = 'mt-2 text-sm font-medium text-fcz-red';
+                msg.classList.remove('hidden');
+            }
         }
 
         loadData();

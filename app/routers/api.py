@@ -162,6 +162,36 @@ async def admin_summary(db: AsyncSession = Depends(get_db), _=Depends(verify_adm
     }
 
 
+class PlayerCreate(BaseModel):
+    name: str
+    category: str
+
+
+@router.post("/admin/players")
+async def add_player(player: PlayerCreate, db: AsyncSession = Depends(get_db), _=Depends(verify_admin)):
+    name = player.name.strip()
+    if not name:
+        raise HTTPException(400, "Naam is verplicht")
+    if player.category not in ("Trainer", "U13", "U15", "U16", "U17"):
+        raise HTTPException(400, "Ongeldige categorie")
+
+    new_player = Player(name=name, category=player.category)
+    db.add(new_player)
+    await db.commit()
+    await db.refresh(new_player)
+    return {"status": "ok", "id": new_player.id, "name": new_player.name, "category": new_player.category}
+
+
+@router.delete("/admin/players/{player_id}")
+async def delete_player(player_id: int, db: AsyncSession = Depends(get_db), _=Depends(verify_admin)):
+    player = await db.get(Player, player_id)
+    if not player:
+        raise HTTPException(404, "Speler niet gevonden")
+    await db.delete(player)
+    await db.commit()
+    return {"status": "ok"}
+
+
 @router.get("/options")
 async def get_options():
     return {
