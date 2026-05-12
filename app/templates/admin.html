@@ -95,6 +95,21 @@
             <p id="addPlayerMsg" class="hidden mt-2 text-sm font-medium"></p>
         </div>
 
+        <!-- Player list -->
+        <div class="bg-white rounded-xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-black">Alle spelers</h2>
+                <input
+                    type="text"
+                    id="playerSearch"
+                    placeholder="Zoek..."
+                    oninput="renderPlayerList()"
+                    class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-fcz-red focus:outline-none w-48"
+                >
+            </div>
+            <div id="playerListAdmin" class="max-h-72 overflow-y-auto space-y-1"></div>
+        </div>
+
         <!-- Missing orders -->
         <div class="bg-white rounded-xl p-6 mb-8">
             <h2 class="text-lg font-bold text-black mb-4">Nog niet besteld</h2>
@@ -132,11 +147,16 @@
 
     <script>
         let allOrders = [];
+        let allPlayers = [];
         let currentFilter = 'all';
 
         async function loadData() {
-            const res = await fetch('/api/admin/summary');
+            const [res, playersRes] = await Promise.all([
+                fetch('/api/admin/summary'),
+                fetch('/api/players?q=')
+            ]);
             const data = await res.json();
+            allPlayers = await playersRes.json();
 
             document.getElementById('statTotal').textContent = data.total_players;
             document.getElementById('statSat').textContent = data.total_orders_saturday;
@@ -149,6 +169,7 @@
 
             allOrders = data.orders;
             renderOrders();
+            renderPlayerList();
         }
 
         function renderSummary(elementId, summary) {
@@ -215,6 +236,45 @@
                     <td class="py-2 px-2 capitalize">${o.fruit}</td>
                 </tr>
             `).join('');
+        }
+
+        function renderPlayerList() {
+            const search = (document.getElementById('playerSearch').value || '').toLowerCase();
+            const filtered = allPlayers.filter(p => p.name.toLowerCase().includes(search));
+            const el = document.getElementById('playerListAdmin');
+
+            if (filtered.length === 0) {
+                el.innerHTML = '<p class="text-gray-400 text-sm py-2">Geen spelers gevonden</p>';
+                return;
+            }
+
+            el.innerHTML = filtered.map(p => `
+                <div class="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50 group">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-0.5 bg-fcz-yellow rounded font-bold text-black">${p.category}</span>
+                        <span class="text-sm text-black">${p.name}</span>
+                    </div>
+                    <button onclick="deletePlayer(${p.id}, '${p.name.replace(/'/g, "\\'")}')"
+                            class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-all">
+                        Verwijder
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function deletePlayer(id, name) {
+            if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen? Alle bestellingen worden ook verwijderd.`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/players/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    loadData();
+                } else {
+                    alert('Fout bij verwijderen');
+                }
+            } catch (e) {
+                alert('Verbindingsfout');
+            }
         }
 
         async function addPlayer() {
